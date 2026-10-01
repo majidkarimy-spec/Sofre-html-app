@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محاسبه قیمت محصولات تولیدی - آرمان پلیمر</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Tahoma', 'Vazir', sans-serif; }
+  body {
+    margin: 0; padding: 80px 20px 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh; color: #333;
+  }
+
+  /* ========== بنر تبلیغاتی ثابت ========== */
+  .ad-banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff6b6b);
+    background-size: 300% 100%;
+    color: #fff;
+    text-align: center;
+    padding: 16px 10px;
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.35);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: gradientMove 4s ease infinite, blink 1.2s ease-in-out infinite;
+    border-bottom: 3px solid #fff;
+  }
+  .ad-banner::before, .ad-banner::after {
+    content: "★";
+    color: #fff700;
+    margin: 0 12px;
+    animation: sparkle 0.8s ease-in-out infinite alternate;
+    display: inline-block;
+  }
+  .ad-banner::after { animation-delay: 0.4s; }
+
+  @keyframes gradientMove {
+    0%,100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.82; transform: scale(1.015); }
+  }
+  @keyframes sparkle {
+    from { transform: rotate(-15deg) scale(0.9); opacity: 0.7; }
+    to { transform: rotate(15deg) scale(1.2); opacity: 1; }
+  }
+
+  /* ========== مودال رمز ورود ========== */
+  .login-overlay {
+    position: fixed; inset: 0;
+    background: rgba(30, 20, 60, 0.92);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    background: #fff; padding: 35px 30px;
+    border-radius: 18px;
+    width: 100%; max-width: 380px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.5);
+    text-align: center;
+    animation: popIn 0.4s ease;
+  }
+  @keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .login-box .lock-icon {
+    font-size: 48px; margin-bottom: 10px;
+  }
+  .login-box h2 {
+    color: #4a3f8f; margin: 0 0 8px;
+    font-size: 20px;
+  }
+  .login-box p {
+    color: #777; font-size: 13px; margin: 0 0 20px;
+  }
+  .login-box input {
+    width: 100%; padding: 13px 15px;
+    border: 2px solid #e0e0e0; border-radius: 10px;
+    font-size: 16px; text-align: center;
+    letter-spacing: 3px; direction: ltr;
+    transition: 0.2s;
+  }
+  .login-box input:focus {
+    outline: none; border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102,126,234,0.15);
+  }
+  .login-box button {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: bold; cursor: pointer;
+    margin-top: 15px;
+    transition: 0.2s;
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+  }
+  .login-box button:hover { transform: translateY(-2px); }
+  .login-error {
+    color: #ff4757; font-size: 13px;
+    margin-top: 12px; min-height: 18px;
+    font-weight: bold;
+  }
+
+  /* ========== بقیه استایل‌ها ========== */
+  .container {
+    max-width: 900px; margin: 0 auto;
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    padding: 30px;
+  }
+  h1 {
+    text-align: center; color: #4a3f8f;
+    margin-top: 0; font-size: 22px;
+    border-bottom: 3px solid #667eea; padding-bottom: 15px;
+  }
+  h2 {
+    font-size: 17px; color: #4a3f8f;
+    margin-top: 25px; border-right: 4px solid #667eea;
+    padding-right: 10px;
+  }
+  .row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+    margin-bottom: 15px;
+  }
+  .field label {
+    display: block; font-size: 13px;
+    margin-bottom: 6px; color: #555; font-weight: bold;
+  }
+  .field input, .field select {
+    width: 100%; padding: 10px 12px;
+    border: 2px solid #e0e0e0; border-radius: 8px;
+    font-size: 14px; transition: 0.2s;
+    background: #fafafa;
+  }
+  .field input:focus {
+    outline: none; border-color: #667eea;
+    background: #fff; box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+  }
+  .mode-toggle {
+    display: flex; gap: 10px; margin: 15px 0;
+    background: #f0f0f5; padding: 5px; border-radius: 10px;
+  }
+  .mode-toggle button {
+    flex: 1; padding: 10px; border: none;
+    background: transparent; cursor: pointer;
+    border-radius: 8px; font-size: 13px;
+    font-weight: bold; color: #666; transition: 0.2s;
+  }
+  .mode-toggle button.active {
+    background: #667eea; color: #fff;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+  }
+  .other-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 40px;
+    gap: 8px; margin-bottom: 8px; align-items: end;
+  }
+  .other-item input {
+    padding: 8px 10px; border: 2px solid #e0e0e0;
+    border-radius: 6px; font-size: 13px; width: 100%;
+  }
+  .other-item input:focus { outline: none; border-color: #667eea; }
+  .remove-btn {
+    background: #ff4757; color: #fff; border: none;
+    border-radius: 6px; width: 36px; height: 36px;
+    cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .remove-btn:hover { background: #ee3543; }
+  .add-btn {
+    background: #2ed573; color: #fff; border: none;
+    padding: 10px 18px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: bold;
+    margin-top: 5px;
+  }
+  .add-btn:hover { background: #26b061; }
+  .calc-btn {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff; border: none; border-radius: 10px;
+    font-size: 16px; font-weight: bold; cursor: pointer;
+    margin-top: 25px;
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+  }
+  .calc-btn:hover { transform: translateY(-2px); }
+
+  .results {
+    margin-top: 25px; padding: 20px;
+    background: #f8f9ff; border-radius: 12px;
+    border: 2px dashed #667eea; display: none;
+  }
+  .results.show { display: block; animation: fadeIn 0.4s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .result-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-bottom: 15px;
+  }
+  .result-card {
+    background: #fff; padding: 12px 15px;
+    border-radius: 8px; border-right: 4px solid #667eea;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .result-card .label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .result-card .value { font-size: 17px; font-weight: bold; color: #4a3f8f; }
+  .final-price {
+    background: linear-gradient(135deg, #2ed573 0%, #17a94a 100%);
+    color: #fff; padding: 20px; border-radius: 12px;
+    text-align: center; margin-top: 15px;
+    box-shadow: 0 8px 25px rgba(46,213,115,0.4);
+  }
+  .final-price .label { font-size: 14px; opacity: 0.9; }
+  .final-price .value { font-size: 30px; font-weight: bold; margin-top: 5px; }
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 15px;
+    background: #fff; border-radius: 8px; overflow: hidden;
+  }
+  table th, table td {
+    padding: 10px; text-align: center; font-size: 12px;
+    border-bottom: 1px solid #eee;
+  }
+  table th { background: #667eea; color: #fff; }
+  table tr:nth-child(even) { background: #f9f9fc; }
+  .hint { font-size: 11px; color: #888; margin-top: 4px; }
+  .badge {
+    display: inline-block; background: #667eea; color: #fff;
+    padding: 2px 8px; border-radius: 12px; font-size: 11px;
+  }
+  .save-status {
+    position: fixed; bottom: 15px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: #2ed573; color: #fff;
+    padding: 8px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: bold;
+    box-shadow: 0 6px 20px rgba(46,213,115,0.5);
+    opacity: 0; transition: 0.4s;
+    z-index: 1500;
+  }
+  .save-status.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  @media (max-width: 600px) {
+    body { padding: 75px 12px 30px; }
+    .ad-banner { font-size: 15px; padding: 12px 6px; }
+    .row, .result-grid { grid-template-columns: 1fr; }
+    .other-item { grid-template-columns: 1fr 1fr; }
+    .container { padding: 20px 15px; }
+    h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- بنر تبلیغاتی ثابت و چشمک‌زن -->
+<div class="ad-banner">آرمان پلیمر کیفیت برتر</div>
+
+<!-- مودال رمز ورود -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="lock-icon">🔒</div>
+    <h2>ورود به برنامه</h2>
+    <p>لطفاً رمز عبور را وارد کنید</p>
+    <input type="password" id="loginPassword" placeholder="رمز عبور" inputmode="numeric" autocomplete="off">
+    <button onclick="checkPassword()">ورود</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div class="container" id="mainApp">
+  <h1>🧮 محاسبه قیمت محصولات تولیدی</h1>
+
+  <h2>مواد اولیه اصلی</h2>
+  <div class="row">
+    <div class="field">
+      <label>قیمت هر کیلوگرم گرانول کربنات کلسیم (آرمان پلیمر)</label>
+      <input type="number" id="priceCaCO3" placeholder="مثلاً 15000" step="any" value="0">
+    </div>
+    <div class="field">
+      <label>قیمت هر کیلوگرم گرید F7000</label>
+      <input type="number" id="priceF7000" placeholder="مثلاً 85000" step="any" value="0">
+    </div>
+  </div>
+
+  <h2>نسبت ترکیب کربنات کلسیم و F7000</h2>
+  <div class="mode-toggle">
+    <button id="btnBag" class="active" onclick="setMode('bag')">نسبت کیسه‌ای (۲۵ کیلویی)</button>
+    <button id="btnKg" onclick="setMode('kg')">نسبت کیلوگرمی</button>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label id="labelCaCO3">تعداد کیسه کربنات کلسیم</label>
+      <input type="number" id="ratioCaCO3" value="10" step="any" min="0">
+      <div class="hint" id="hintCaCO3">هر کیسه ۲۵ کیلوگرم</div>
+    </div>
+    <div class="field">
+      <label id="labelF7000">تعداد کیسه F7000</label>
+      <input type="number" id="ratioF7000" value="1" step="any" min="0">
+      <div class="hint" id="hintF7000">هر کیسه ۲۵ کیلوگرم</div>
+    </div>
+  </div>
+
+  <h2>مواد اولیه دیگر (اختیاری)</h2>
+  <div class="other-materials" id="otherMaterials"></div>
+  <button class="add-btn" onclick="addOther()">➕ افزودن ماده دیگر</button>
+
+  <h2>هزینه‌های جانبی (به ازای هر کیلوگرم محصول)</h2>
+  <div class="row">
+    <div class="field">
+      <label>هزینه چاپ (تومان بر کیلوگرم)</label>
+      <input type="number" id="printCost" value="0" step="any">
+    </div>
+    <div class="field">
+      <label>سایر هزینه‌ها (تومان بر کیلوگرم)</label>
+      <input type="number" id="otherCost" value="0" step="any">
+      <div class="hint">شامل بسته‌بندی، حمل، انرژی و ...</div>
+    </div>
+  </div>
+
+  <h2>سود</h2>
+  <div class="row">
+    <div class="field">
+      <label>درصد سود (٪)</label>
+      <input type="number" id="profitPercent" value="20" step="any" min="0">
+    </div>
+    <div class="field">
+      <label>یا مبلغ سود ثابت (تومان بر کیلوگرم)</label>
+      <input type="number" id="profitFixed" value="0" step="any" min="0">
+      <div class="hint">اگر مقدار بدهید، بر درصد سود اولویت دارد.</div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">💰 محاسبه قیمت فروش</button>
+
+  <div class="results" id="results">
+    <h2 style="margin-top:0">📊 نتیجه محاسبات</h2>
+    <div class="result-grid">
+      <div class="result-card"><div class="label">وزن کل ترکیب</div><div class="value" id="resTotalWeight">-</div></div>
+      <div class="result-card"><div class="label">هزینه مواد اولیه (کل)</div><div class="value" id="resMaterialsCost">-</div></div>
+      <div class="result-card"><div class="label">هزینه مواد اولیه (هر کیلوگرم)</div><div class="value" id="resMatPerKg">-</div></div>
+      <div class="result-card"><div class="label">هزینه‌های جانبی (هر کیلوگرم)</div><div class="value" id="resExtraPerKg">-</div></div>
+      <div class="result-card"><div class="label">بهای تمام‌شده (هر کیلوگرم)</div><div class="value" id="resTotalCostPerKg">-</div></div>
+      <div class="result-card"><div class="label">سود (هر کیلوگرم)</div><div class="value" id="resProfitPerKg">-</div></div>
+    </div>
+    <h2>درصد ترکیب هر ماده</h2>
+    <table>
+      <thead>
+        <tr><th>ماده</th><th>وزن (کیلوگرم)</th><th>درصد ترکیب</th><th>هزینه (تومان)</th></tr>
+      </thead>
+      <tbody id="resTable"></tbody>
+    </table>
+    <div class="final-price">
+      <div class="label">💵 قیمت فروش نهایی (هر کیلوگرم)</div>
+      <div class="value" id="resFinalPrice">-</div>
+    </div>
+  </div>
+</div>
+
+<div class="save-status" id="saveStatus">✓ ذخیره شد</div>
+
+<script>
+const APP_PASSWORD = "09125013539";
+const STORAGE_KEY = "arman_polymer_calc_v1";
+const AUTH_KEY = "arman_polymer_auth";
+
+let mode = 'bag';
+let otherIndex = 0;
+let isAuthenticated = false;
+
+/* ================== رمز ورود ================== */
+function checkPassword() {
+  const input = document.getElementById('loginPassword');
+  const err = document.getElementById('loginError');
+  if (input.value.trim() === APP_PASSWORD) {
+    sessionStorage.setItem(AUTH_KEY, '1');
+    isAuthenticated = true;
+    document.getElementById('loginOverlay').classList.add('hidden');
+    loadData(); // بعد از ورود، داده‌ها بارگذاری شوند
+    if (!document.querySelector('.other-item')) addOther();
+    err.textContent = '';
+  } else {
+    err.textContent = '❌ رمز عبور اشتباه است';
+    input.value = '';
+    input.focus();
+    // لرزش
+    input.style.animation = 'none';
+    setTimeout(() => {
+      input.style.animation = 'blink 0.3s 3';
+    }, 10);
+  }
+}
+
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPassword();
+});
+
+/* ================== ذخیره‌سازی ================== */
+function showSaveStatus() {
+  const el = document.getElementById('saveStatus');
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 1200);
+}
+
+function collectData() {
+  const others = [];
+  document.querySelectorAll('.other-item').forEach(item => {
+    others.push({
+      name: item.querySelector('.o-name').value,
+      weight: item.querySelector('.o-weight').value,
+      price: item.querySelector('.o-price').value
+    });
+  });
+
+  return {
+    mode,
+    priceCaCO3: document.getElementById('priceCaCO3').value,
+    priceF7000: document.getElementById('priceF7000').value,
+    ratioCaCO3: document.getElementById('ratioCaCO3').value,
+    ratioF7000: document.getElementById('ratioF7000').value,
+    printCost: document.getElementById('printCost').value,
+    otherCost: document.getElementById('otherCost').value,
+    profitPercent: document.getElementById('profitPercent').value,
+    profitFixed: document.getElementById('profitFixed').value,
+    others
+  };
+}
+
+function saveData(silent = false) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectData()));
+    if (!silent) showSaveStatus();
+  } catch (e) { console.warn('Save failed', e); }
+}
+
+function loadData() {
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  } catch (e) { data = null; }
+  if (!data) return;
+
+  // مواد اصلی
+  document.getElementById('priceCaCO3').value = data.priceCaCO3 ?? 0;
+  document.getElementById('priceF7000').value = data.priceF7000 ?? 0;
+  document.getElementById('ratioCaCO3').value = data.ratioCaCO3 ?? 10;
+  document.getElementById('ratioF7000').value = data.ratioF7000 ?? 1;
+  document.getElementById('printCost').value = data.printCost ?? 0;
+  document.getElementById('otherCost').value = data.otherCost ?? 0;
+  document.getElementById('profitPercent').value = data.profitPercent ?? 20;
+  document.getElementById('profitFixed').value = data.profitFixed ?? 0;
+
+  // حالت
+  if (data.mode) setMode(data.mode);
+
+  // مواد دیگر
+  document.getElementById('otherMaterials').innerHTML = '';
+  otherIndex = 0;
+  if (data.others && data.others.length) {
+    data.others.forEach(o => addOther(o.name, o.weight, o.price));
+  } else {
+    addOther();
+  }
+}
+
+/* ================== حالت کیسه‌ای/کیلویی ================== */
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnBag').classList.toggle('active', m === 'bag');
+  document.getElementById('btnKg').classList.toggle('active', m === 'kg');
+
+  const labelCa = document.getElementById('labelCaCO3');
+  const labelF = document.getElementById('labelF7000');
+  const hintCa = document.getElementById('hintCaCO3');
+  const hintF = document.getElementById('hintF7000');
+
+  if (m === 'bag') {
+    labelCa.textContent = 'تعداد کیسه کربنات کلسیم';
+    labelF.textContent = 'تعداد کیسه F7000';
+    hintCa.textContent = 'هر کیسه ۲۵ کیلوگرم';
+    hintF.textContent = 'هر کیسه ۲۵ کیلوگرم';
+  } else {
+    labelCa.textContent = 'وزن کربنات کلسیم (کیلوگرم)';
+    labelF.textContent = 'وزن F7000 (کیلوگرم)';
+    hintCa.textContent = 'بر حسب کیلوگرم';
+    hintF.textContent = 'بر حسب کیلوگرم';
+  }
+  saveData(true);
+}
+
+/* ================== مواد دیگر ================== */
+function addOther(name = '', weight = '', price = '') {
+  const idx = otherIndex++;
+  const div = document.createElement('div');
+  div.className = 'other-item';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <input type="text" class="o-name" placeholder="نام ماده" value="${name}">
+    <input type="number" class="o-weight" placeholder="وزن (kg)" step="any" min="0" value="${weight}">
+    <input type="number" class="o-price" placeholder="قیمت/kg" step="any" min="0" value="${price}">
+    <button class="remove-btn" onclick="this.parentElement.remove(); saveData();">×</button>
+  `;
+  document.getElementById('otherMaterials').appendChild(div);
+  attachAutoSave(div);
+}
+
+function attachAutoSave(root) {
+  root.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => saveData(true));
+    inp.addEventListener('change', () => saveData(true));
+  });
+}
+
+/* ================== محاسبات ================== */
+function num(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? 0 : v;
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('fa-IR');
+}
+
+function calculate() {
+  const priceCa = num('priceCaCO3');
+  const priceF = num('priceF7000');
+  const ratioCa = num('ratioCaCO3');
+  const ratioF = num('ratioF7000');
+
+  let weightCa, weightF;
+  if (mode === 'bag') {
+    weightCa = ratioCa * 25;
+    weightF = ratioF * 25;
+  } else {
+    weightCa = ratioCa;
+    weightF = ratioF;
+  }
+
+  const materials = [];
+  if (weightCa > 0 || priceCa > 0) {
+    materials.push({ name: 'گرانول کربنات کلسیم (آرمان پلیمر)', weight: weightCa, price: priceCa });
+  }
+  if (weightF > 0 || priceF > 0) {
+    materials.push({ name: 'گرید F7000', weight: weightF, price: priceF });
+  }
+
+  document.querySelectorAll('.other-item').forEach(item => {
+    const name = item.querySelector('.o-name').value.trim() || 'ماده دیگر';
+    const w = parseFloat(item.querySelector('.o-weight').value) || 0;
+    const p = parseFloat(item.querySelector('.o-price').value) || 0;
+    if (w > 0) materials.push({ name, weight: w, price: p });
+  });
+
+  const totalWeight = materials.reduce((s, m) => s + m.weight, 0);
+  if (totalWeight <= 0) {
+    alert('لطفاً حداقل یک ماده با وزن بیشتر از صفر وارد کنید.');
+    return;
+  }
+
+  const totalMaterialsCost = materials.reduce((s, m) => s + m.weight * m.price, 0);
+  const matPerKg = totalMaterialsCost / totalWeight;
+
+  const printCost = num('printCost');
+  const otherCost = num('otherCost');
+  const extraPerKg = printCost + otherCost;
+  const totalCostPerKg = matPerKg + extraPerKg;
+
+  const profitFixed = num('profitFixed');
+  const profitPercent = num('profitPercent');
+  let profitPerKg;
+  if (profitFixed > 0) {
+    profitPerKg = profitFixed;
+  } else {
+    profitPerKg = totalCostPerKg * (profitPercent / 100);
+  }
+
+  const finalPrice = totalCostPerKg + profitPerKg;
+
+  document.getElementById('resTotalWeight').textContent = fmt(totalWeight) + ' کیلوگرم';
+  document.getElementById('resMaterialsCost').textContent = fmt(totalMaterialsCost) + ' تومان';
+  document.getElementById('resMatPerKg').textContent = fmt(matPerKg) + ' تومان';
+  document.getElementById('resExtraPerKg').textContent = fmt(extraPerKg) + ' تومان';
+  document.getElementById('resTotalCostPerKg').textContent = fmt(totalCostPerKg) + ' تومان';
+  document.getElementById('resProfitPerKg').textContent = fmt(profitPerKg) + ' تومان';
+  document.getElementById('resFinalPrice').textContent = fmt(finalPrice) + ' تومان';
+
+  const tbody = document.getElementById('resTable');
+  tbody.innerHTML = '';
+  materials.forEach(m => {
+    const pct = (m.weight / totalWeight) * 100;
+    const cost = m.weight * m.price;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${m.name}</td>
+      <td>${fmt(m.weight)}</td>
+      <td><span class="badge">${pct.toFixed(2)}٪</span></td>
+      <td>${fmt(cost)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const trTotal = document.createElement('tr');
+  trTotal.style.fontWeight = 'bold';
+  trTotal.style.background = '#eef1ff';
+  trTotal.innerHTML = `
+    <td>جمع کل</td>
+    <td>${fmt(totalWeight)}</td>
+    <td>100٪</td>
+    <td>${fmt(totalMaterialsCost)}</td>
+  `;
+  tbody.appendChild(trTotal);
+
+  const res = document.getElementById('results');
+  res.classList.add('show');
+  res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // ذخیره نهایی
+  saveData(true);
+}
+
+/* ================== راه‌اندازی ================== */
+window.addEventListener('DOMContentLoaded', () => {
+  // اتصال auto-save به همه inputها
+  const inputs = ['priceCaCO3','priceF7000','ratioCaCO3','ratioF7000','printCost','otherCost','profitPercent','profitFixed'];
+  inputs.forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', () => saveData(true));
+    el.addEventListener('change', () => saveData(true));
+  });
+
+  // بررسی ورود قبلی در این نشست
+  if (sessionStorage.getItem(AUTH_KEY) === '1') {
+    isAuthenticated = true;
+    document.getElementById('loginOverlay').classList.add('hidden');
+    loadData();
+    if (!document.querySelector('.other-item')) addOther();
+  } else {
+    setTimeout(() => document.getElementById('loginPassword').focus(), 200);
+  }
+});
+</script>
+</body>
+</html>
